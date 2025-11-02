@@ -1,0 +1,50 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Local backend/state backups
+backend.tf.bak
+
+# AWS credentials / local env
+.env
+.env.*
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+env/
+.venv/
+pip-log.txt
+*.pyc
+
+# Django static & media
+staticfiles/
+media/
+
+# Docker
+docker-compose.override.yml
+docker-compose.*.yml
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+.pytest_cache/
+.coverage
