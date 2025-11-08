@@ -7,8 +7,8 @@
 
 terraform {
   backend "s3" {
-    bucket         = "go-it-hw-devops-lesson5-20251102"
-    key            = "lesson-5/terraform.tfstate"
+    bucket         = "go-it-hw-devops-lesson7-20251108"
+    key            = "lesson-7/terraform.tfstate"
     region         = "eu-central-1"
     dynamodb_table = "terraform-locks"
     encrypt        = true
