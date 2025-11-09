@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configmap.name }}
+data:
+  DJANGO_SECRET_KEY: {{ .Values.configmap.env.DJANGO_SECRET_KEY | quote }}
+  DJANGO_DEBUG: {{ .Values.configmap.env.DJANGO_DEBUG | quote }}
+  DJANGO_ALLOWED_HOSTS: {{ .Values.configmap.env.DJANGO_ALLOWED_HOSTS | quote }}
