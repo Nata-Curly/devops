@@ -203,4 +203,3 @@ Jenkinsfile
 scripts/update_values.sh
 ```
 
-Questions or next step? Tell me which automation you want me to add next (e.g., Jenkins JCasC, Terraform-managed Jenkins secrets, or apply instructions).
