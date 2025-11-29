@@ -3,7 +3,7 @@ resource "aws_s3_bucket" "tf_state" {
 
   tags = {
     Name = var.bucket_name
-    Env  = "lesson-7"
+    Env  = "lesson-8-9"
   }
 }
 

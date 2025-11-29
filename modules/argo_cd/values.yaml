@@ -1,0 +1,26 @@
+server:
+  service:
+    type: ClusterIP
+  extraArgs: ["--insecure"]
+
+controller:
+  enabled: true
+
+repoServer:
+  enabled: true
+
+# You can customize RBAC and admin password via secrets or values
+configs:
+  cm:
+    # example: disable admin auto-create
+    # application.instanceLabelKey: "argocd.argoproj.io/instance"
+
+# Resources and sizing
+resources:
+  server:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"

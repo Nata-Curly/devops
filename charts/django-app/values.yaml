@@ -1,5 +1,5 @@
 image:
-  repository: 381414049346.dkr.ecr.eu-central-1.amazonaws.com/lesson-7-ecr
+  repository: 381414049346.dkr.ecr.eu-central-1.amazonaws.com/lesson-8-9-ecr
   tag: latest
   pullPolicy: IfNotPresent
 

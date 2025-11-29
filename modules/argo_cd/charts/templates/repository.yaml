@@ -1,0 +1,11 @@
+{{- range .Values.repositories }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-repo-{{ .name }}
+  labels:
+    app.kubernetes.io/managed-by: helm
+data:
+  url: "{{ .url }}"
+---
+{{- end }}

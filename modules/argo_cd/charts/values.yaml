@@ -1,0 +1,14 @@
+# Define applications and repositories to be created by this chart
+applications:
+  - name: django-app
+    project: default
+    repoURL: "https://github.com/your-org/your-django-helm-repo.git"
+    path: "charts/django-app"
+    targetRevision: "main"
+    destination:
+      server: "https://kubernetes.default.svc"
+      namespace: "django"
+
+repositories:
+  - name: repo
+    url: "https://github.com/your-org/your-django-helm-repo.git"
