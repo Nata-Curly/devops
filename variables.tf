@@ -33,3 +33,51 @@ variable "argocd_chart_version" {
   type        = string
   default     = "5.4.0"
 }
+
+variable "db_name" {
+  description = "RDS database name"
+  type        = string
+  default     = "appdb"
+}
+
+variable "db_username" {
+  description = "Master DB username"
+  type        = string
+  default     = "dbadmin"
+}
+
+variable "db_password" {
+  description = "Master DB password (sensitive)"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_engine" {
+  description = "DB engine (postgres, mysql, aurora-postgresql, aurora-mysql)"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_engine_version" {
+  description = "DB engine version (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "db_instance_class" {
+  description = "Instance class for DB"
+  type        = string
+  default     = "db.t3.medium"
+}
+
+variable "db_allocated_storage" {
+  description = "Storage for single-instance RDS (GB)"
+  type        = number
+  default     = 20
+}
+
+variable "db_use_aurora" {
+  description = "When true, create Aurora cluster(s) instead of a single RDS instance"
+  type        = bool
+  default     = false
+}

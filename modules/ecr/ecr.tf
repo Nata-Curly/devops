@@ -10,7 +10,7 @@ resource "aws_ecr_repository" "repo" {
 
   tags = {
     Name = var.ecr_name
-    Env  = "lesson-8-9"
+    Env  = "lesson-db-module"
   }
 }
 

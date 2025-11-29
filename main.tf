@@ -59,13 +59,13 @@ module "vpc" {
   public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
   availability_zones = ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
-  vpc_name           = "lesson-8-9-vpc"
+  vpc_name           = "lesson-db-module-vpc"
 }
 
 # ECR module
 module "ecr" {
   source       = "./modules/ecr"
-  ecr_name     = "lesson-8-9-ecr"
+  ecr_name     = "lesson-db-module-ecr"
   scan_on_push = true
 }
 
@@ -78,6 +78,25 @@ module "eks" {
   desired_size    = 3                             
   max_size        = 4                             
   min_size        = 1                             
+}
+
+# RDS module - creates either a single RDS instance or an Aurora cluster
+module "rds" {
+  source            = "./modules/rds"
+  use_aurora        = var.db_use_aurora
+  subnet_ids        = module.vpc.private_subnets
+  vpc_id            = module.vpc.vpc_id
+  db_name           = var.db_name
+  username          = var.db_username
+  password          = var.db_password
+  engine            = var.db_engine
+  engine_version    = var.db_engine_version
+  instance_class    = var.db_instance_class
+  allocated_storage = var.db_allocated_storage
+  tags = {
+    Environment = "prod"
+    Project     = "django-app"
+  }
 }
 
 # Install Jenkins into the cluster via Helm (module uses root providers)

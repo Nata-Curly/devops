@@ -10,6 +10,6 @@ resource "aws_dynamodb_table" "tf_locks" {
 
   tags = {
     Name = var.table_name
-    Env  = "lesson-8-9"
+    Env  = "lesson-db-module"
   }
 }

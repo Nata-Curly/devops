@@ -1,4 +1,4 @@
-# AWS Django EKS Infrastructure — Terraform + Helm + CI/CD
+# AWS Django EKS Infrastructure + RDS Module — Terraform + Helm + CI/CD
 
 This repository provisions AWS infrastructure for a Django application using Terraform, deploys the application to EKS using Helm, and includes CI/CD components: Jenkins (built with Helm via Terraform) and Argo CD (also installed via Helm + Terraform).
 
@@ -29,17 +29,162 @@ Quick flow
 2. Jenkins pipeline builds image with Kaniko and pushes to ECR, then updates target Helm repo `values.yaml` and pushes commit.
 3. Argo CD monitors the Helm chart repo and automatically syncs the chart to the cluster.
 
-1) Bootstrap backend & init
+DB module overview
+
+This repository now includes a reusable Terraform DB module at `modules/rds` that supports two modes:
+
+- Single-instance RDS (set `use_aurora = false`) — provisions an `aws_db_instance` with an optional parameter group and DB subnet group.
+- Amazon Aurora cluster (set `use_aurora = true`) — provisions an `aws_rds_cluster` and an `aws_rds_cluster_instance` (writer) attached to the cluster.
+
+Key module inputs (required):
+
+- `subnet_ids` (list(string)) — private subnet IDs for the DB Subnet Group
+- `vpc_id` (string) — VPC ID where the DB will be created
+- `db_name` (string) — database name
+- `username` (string) — master user name
+- `password` (string, sensitive) — master user password
+- `use_aurora` (bool) — `true` for Aurora, `false` for single-instance
+
+Selected outputs:
+
+- `instance_endpoint` / `instance_port` — endpoint + port for single-instance DB (null when Aurora is used)
+- `cluster_endpoint` / `cluster_reader_endpoint` / `cluster_port` — endpoints + port for Aurora (null when single-instance is used)
+- `security_group_id` — security group created for the DB resources
+
+Usage examples
+
+1. Single RDS instance (Postgres example)
+
+```hcl
+module "rds" {
+  source           = "./modules/rds"
+  use_aurora       = false
+  subnet_ids       = ["subnet-01234567","subnet-89abcdef"]
+  vpc_id           = "vpc-0123456789abcdef0"
+  db_name          = "myappdb"
+  username         = "dbadmin"
+  password         = var.db_password
+  engine           = "postgres"
+  engine_version   = "13.7"
+  instance_class   = "db.t3.medium"
+  allocated_storage = 20
+  tags = {
+    Environment = "prod"
+    Project     = "django-app"
+  }
+}
+
+output "rds_instance_endpoint" {
+  value = module.rds.instance_endpoint
+}
+```
+
+2. Aurora cluster (Postgres-compatible Aurora)
+
+```hcl
+module "rds_aurora" {
+  source         = "./modules/rds"
+  use_aurora     = true
+  subnet_ids     = ["subnet-01234567","subnet-89abcdef"]
+  vpc_id         = "vpc-0123456789abcdef0"
+  db_name        = "myappdb"
+  username       = "clusteradmin"
+  password       = var.db_password
+  engine         = "aurora-postgresql"
+  engine_version = "11.13"
+  instance_class = "db.r5.large"
+  tags = {
+    Environment = "prod"
+    Project     = "django-app"
+  }
+}
+
+output "aurora_cluster_endpoint" {
+  value = module.rds_aurora.cluster_endpoint
+}
+```
+
+Notes and recommendations
+
+- `prevent_destroy` is enabled by default in the module to avoid accidental deletion; set it to `false` if you plan to run `terraform destroy` during testing.
+- The security group created by the module opens ingress to the `vpc_cidr_block` variable if provided, otherwise a default private CIDR is used — for production restrict ingress to specific app subnet CIDRs or to application security groups.
+- Parameter groups created by the module contain a small set of example parameters; extend them as needed for your engine and workload.
+- Creating RDS or Aurora resources incurs charges. Test carefully in a non-production account or with minimal instance classes/sizes.
+
+RDS module variables (reference)
+
+Below are the variables exposed by `modules/rds`. Use these in your `module` block or via `terraform.tfvars`.
+
+- `use_aurora` (bool, default: `false`): create Aurora when `true`, otherwise create a single `aws_db_instance`.
+- `engine` (string, default: `postgres`): engine identifier (`postgres`, `mysql`, `aurora-postgresql`, `aurora-mysql`).
+- `engine_version` (string, default: `""`): engine version (optional).
+- `instance_class` (string, default: `db.t3.micro`): instance class for DB instances.
+- `allocated_storage` (number, default: `20`): storage (GB) for single RDS instance (ignored for Aurora).
+- `storage_type` (string, default: `gp2`): storage type for single RDS instance (`gp2`, `gp3`, etc.).
+- `multi_az` (bool, default: `false`): enable Multi-AZ for single RDS instance.
+- `db_name` (string, default: `appdb`): initial DB name to create.
+- `username` (string, default: `dbadmin`): master DB username.
+- `password` (string, sensitive): master DB password (no default — set via tfvars or secure variable input).
+- `subnet_ids` (list(string), required): list of private subnet IDs for the DB Subnet Group.
+- `vpc_id` (string, required): VPC id where the DB resources will be created.
+- `vpc_cidr_block` (string, default: `""`): optional CIDR to restrict DB SG ingress; when empty a default private CIDR is used.
+- `publicly_accessible` (bool, default: `false`): whether DB instances should be publicly accessible (avoid in production).
+- `use_custom_parameter_group` (bool, default: `true`): create and attach the module-created parameter group for single instances.
+- `parameter_group_family_postgres` (string, default: `postgres12`): parameter group family for PostgreSQL single-instance.
+- `parameter_group_family_mysql` (string, default: `mysql8.0`): parameter group family for MySQL single-instance.
+- `backup_retention_period` (number, default: `7`): backup retention days for instance/cluster.
+- `skip_final_snapshot` (bool, default: `false`): when destroying, skip final snapshot if `true`.
+- `final_snapshot_identifier` (string, default: `""`): optional snapshot id to use when not skipping final snapshot.
+- `prevent_destroy` (bool, default: `true`): lifecycle prevent_destroy to avoid accidental deletions.
+- `apply_immediately` (bool, default: `false`): whether to apply parameter changes immediately.
+- `tags` (map(string), default: `{}`): tags applied to created resources.
+- `port` (number, default: `5432`): DB port.
+
+How to change engine / instance class / behavior
+
+- To switch between Postgres and MySQL, set `engine = "postgres"` or `engine = "mysql"` and (optionally) `engine_version`.
+- To enable Aurora use `use_aurora = true` and set `engine` to `aurora-postgresql` or `aurora-mysql`.
+- To change instance sizing, set `instance_class` to the desired `db.*` family (for Aurora writer instances this controls the writer instance type).
+
+1. Bootstrap backend & init
 
 ---
 
-Create or confirm S3 bucket and DynamoDB table for Terraform state. Update `backend.tf` if needed.
+Before running Terraform ensure your AWS credentials are configured for the account where you will provision resources (for example via `aws configure` or `AWS_PROFILE`, and `AWS_REGION`). These commands are intended to be run in `bash.exe` (WSL or Git Bash) on Windows.
 
-Initialize Terraform:
+1. Confirm or create the S3 bucket and DynamoDB table used for remote state. See `backend.tf` for backend configuration — if you need to override values, use `-backend-config` flags.
+
+2. Initialize Terraform (this configures the backend and downloads providers):
 
 ```bash
-terraform init
+# from repo root
+export AWS_REGION=us-east-1
+terraform init -upgrade
 ```
+
+3. Create an execution plan and review it:
+
+```bash
+terraform plan -out plan.tfplan
+```
+
+4. Apply the plan (recommended: review the plan file before applying):
+
+```bash
+terraform apply plan.tfplan
+```
+
+Quick checklist (before apply):
+
+- Ensure `backend.tf` points to the correct S3 bucket and DynamoDB table (or provide `-backend-config` values).
+- Confirm `AWS_REGION` and credentials are set in your shell.
+- Confirm any variable overrides you need (via `terraform.tfvars` or `-var` flags).
+- If your EKS cluster already exists and you only want to create Jenkins/ArgoCD, be cautious which modules/variables you enable.
+
+Notes:
+
+- Running `terraform apply` will create resources that may incur AWS charges (EKS, EC2, RDS, etc.).
+- If your environment already has an OIDC provider for the cluster, call the Jenkins module with `create_oidc_provider = false` to avoid duplicate providers.
 
 2. Apply infrastructure (create VPC, ECR, EKS, Jenkins, Argo CD)
 
@@ -203,10 +348,22 @@ Jenkinsfile
 scripts/update_values.sh
 ```
 
-If you'd like, I can:
+Toggle RDS vs Aurora (root variable)
 
-- Add Terraform-managed Jenkins credentials as Kubernetes secrets (automate Jenkins credential creation via Job DSL or JCasC).
-- Add a sample Jenkins Configuration-as-Code manifest to seed credentials and jobs.
-- Run additional validation steps or generate a small diagram for CI/CD flow.
+You can switch between creating a single RDS instance and an Aurora cluster without editing `main.tf` by using the root variable `db_use_aurora` (default: `false`). Set it in a `terraform.tfvars` file or pass it on the CLI.
 
-Questions or next step? Tell me which automation you want me to add next (e.g., Jenkins JCasC, Terraform-managed Jenkins secrets, or apply instructions).
+Example `terraform.tfvars`:
+
+```hcl
+db_use_aurora = true
+db_password    = "SuperSecretPassword123!"
+```
+
+Or pass via CLI when planning/applying:
+
+```bash
+terraform plan -var 'db_use_aurora=true' -out=plan.tfplan
+terraform apply plan.tfplan
+```
+
+This allows CI/CD pipelines or environment-specific tfvars to control whether Aurora or single-instance RDS is provisioned.

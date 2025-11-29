@@ -17,3 +17,13 @@ output "ecr_repository_url" {
   description = "ECR repository URL"
   value       = module.ecr.repository_url
 }
+
+output "rds_instance_endpoint" {
+  value       = try(module.rds.instance_endpoint, null)
+  description = "Single-instance RDS endpoint (null if Aurora)"
+}
+
+output "rds_cluster_endpoint" {
+  value       = try(module.rds.cluster_endpoint, null)
+  description = "Aurora cluster endpoint (null if single-instance)"
+}
