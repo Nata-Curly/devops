@@ -203,10 +203,4 @@ Jenkinsfile
 scripts/update_values.sh
 ```
 
-If you'd like, I can:
-
-- Add Terraform-managed Jenkins credentials as Kubernetes secrets (automate Jenkins credential creation via Job DSL or JCasC).
-- Add a sample Jenkins Configuration-as-Code manifest to seed credentials and jobs.
-- Run additional validation steps or generate a small diagram for CI/CD flow.
-
 Questions or next step? Tell me which automation you want me to add next (e.g., Jenkins JCasC, Terraform-managed Jenkins secrets, or apply instructions).
