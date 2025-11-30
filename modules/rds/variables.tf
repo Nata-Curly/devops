@@ -141,3 +141,21 @@ variable "port" {
   type        = number
   default     = 5432
 }
+
+variable "allowed_security_group_ids" {
+  description = "Optional list of Security Group IDs that are allowed to access the DB (preferred over CIDR). If empty, vpc_cidr_block is used."
+  type        = list(string)
+  default     = []
+}
+
+variable "replica_count" {
+  description = "Number of Aurora reader instances to create when use_aurora = true"
+  type        = number
+  default     = 0
+}
+
+variable "parameters_map" {
+  description = "Optional map of parameter_name -> value to include in the parameter group"
+  type        = map(string)
+  default     = {}
+}

@@ -57,3 +57,9 @@ variable "ecr_repository_url" {
   type        = string
   default     = ""
 }
+
+variable "ecr_repository_arn" {
+  description = "ECR repository ARN to scope IAM permissions (optional). If empty, permissions will use '*'."
+  type        = string
+  default     = ""
+}

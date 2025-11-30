@@ -1,8 +1,18 @@
-# AWS Django EKS Infrastructure + RDS Module — Terraform + Helm + CI/CD
+# Final Project — AWS DevOps Infrastructure (EKS + CI/CD + RDS/Aurora + ECR + Monitoring)
 
-This repository provisions AWS infrastructure for a Django application using Terraform, deploys the application to EKS using Helm, and includes CI/CD components: Jenkins (built with Helm via Terraform) and Argo CD (also installed via Helm + Terraform).
+This repository implements the final project: a complete DevOps infrastructure on AWS using Terraform and Helm.
 
-This README documents how to bootstrap the infrastructure, install Jenkins and Argo CD, configure IRSA for Jenkins agents (Kaniko), and run the Jenkins pipeline that builds and pushes Docker images to ECR and updates the Helm chart in Git. It also shows how Argo CD will pick up those changes and sync the cluster.
+Goal: provision a production-like environment that demonstrates Kubernetes (EKS), CI/CD (Jenkins + Argo CD), a managed database (RDS or Aurora), a container registry (ECR), and observability (Prometheus + Grafana). Use `RUNBOOK.md` for exact deploy and verification steps.
+
+Core components included in this repo:
+
+- VPC and networking (private/public subnets)
+- ECR (container registry)
+- EKS (Kubernetes cluster)
+- Jenkins (CI system, installed via Helm + Terraform, with IRSA for Kaniko)
+- Argo CD (GitOps for application delivery)
+- RDS / Aurora (database module with toggle via `db_use_aurora`)
+- Monitoring: Prometheus + Grafana (installed via `kube-prometheus-stack` Helm chart)
 
 Prerequisites
 
@@ -50,6 +60,10 @@ Selected outputs:
 - `instance_endpoint` / `instance_port` — endpoint + port for single-instance DB (null when Aurora is used)
 - `cluster_endpoint` / `cluster_reader_endpoint` / `cluster_port` — endpoints + port for Aurora (null when single-instance is used)
 - `security_group_id` — security group created for the DB resources
+
+## Runbook & verification
+
+See `RUNBOOK.md` for a step-by-step runbook: how to initialize, deploy (terraform apply), port-forward Jenkins/ArgoCD/Grafana, verify CI/CD and monitoring, and cleanup instructions.
 
 Usage examples
 
@@ -367,3 +381,18 @@ terraform apply plan.tfplan
 ```
 
 This allows CI/CD pipelines or environment-specific tfvars to control whether Aurora or single-instance RDS is provisioned.
+
+Monitoring (Prometheus + Grafana)
+
+This repository includes a monitoring module (`modules/monitoring`) which installs `kube-prometheus-stack` (Prometheus + Grafana) into the `monitoring` namespace via Helm.
+
+- Configure the Grafana admin password using `TF_VAR_grafana_admin_password` or `terraform.tfvars`.
+- To access Grafana locally use port-forwarding (example):
+
+```bash
+# forward Grafana UI
+kubectl -n monitoring port-forward svc/$(terraform output -raw grafana_service) 3000:80
+# open http://localhost:3000 and login with user 'admin' and the password you configured
+```
+
+Prometheus is installed alongside Grafana and will provide cluster and application metrics to Grafana dashboards.

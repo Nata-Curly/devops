@@ -81,3 +81,10 @@ variable "db_use_aurora" {
   type        = bool
   default     = false
 }
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password for monitoring module (sensitive)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

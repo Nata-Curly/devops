@@ -13,6 +13,9 @@ resource "aws_rds_cluster" "this" {
   skip_final_snapshot = var.skip_final_snapshot
 
   tags = merge({ Name = "aurora-cluster" }, var.tags)
+  lifecycle {
+    prevent_destroy = var.prevent_destroy
+  }
 }
 
 resource "aws_rds_cluster_instance" "writer" {
@@ -26,4 +29,24 @@ resource "aws_rds_cluster_instance" "writer" {
   publicly_accessible = var.publicly_accessible
   db_subnet_group_name = aws_db_subnet_group.this.name
   tags = merge({ Name = "aurora-writer" }, var.tags)
+  lifecycle {
+    prevent_destroy = var.prevent_destroy
+  }
+}
+
+# Optional reader instances for Aurora (replicas)
+resource "aws_rds_cluster_instance" "readers" {
+  count              = var.use_aurora && var.replica_count > 0 ? var.replica_count : 0
+  identifier         = "aurora-reader-${count.index}-${substr(md5(var.db_name),0,6)}"
+  cluster_identifier = aws_rds_cluster.this[0].id
+  instance_class     = var.instance_class
+  engine             = var.engine
+  engine_version     = var.engine_version
+
+  publicly_accessible = var.publicly_accessible
+  db_subnet_group_name = aws_db_subnet_group.this.name
+  tags = merge({ Name = "aurora-reader" }, var.tags)
+  lifecycle {
+    prevent_destroy = var.prevent_destroy
+  }
 }

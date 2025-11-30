@@ -13,14 +13,7 @@ resource "aws_security_group" "db_sg" {
   name        = "rds-sg-${substr(md5(var.vpc_id),0,8)}"
   description = "Security group for RDS created by module"
   vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = var.port
-    to_port     = var.port
-    protocol    = "tcp"
-    cidr_blocks = length(var.vpc_cidr_block) > 0 ? [var.vpc_cidr_block] : ["10.0.0.0/8"]
-  }
-
+  # ingress rules are created as separate resources below depending on inputs
   egress {
     from_port   = 0
     to_port     = 0
@@ -29,6 +22,28 @@ resource "aws_security_group" "db_sg" {
   }
 
   tags = merge({ Name = "rds-sg" }, var.tags)
+}
+
+# If allowed_security_group_ids provided, create rules allowing those security groups
+resource "aws_security_group_rule" "from_sgs" {
+  count                  = length(var.allowed_security_group_ids) > 0 ? length(var.allowed_security_group_ids) : 0
+  type                   = "ingress"
+  from_port              = var.port
+  to_port                = var.port
+  protocol               = "tcp"
+  security_group_id      = aws_security_group.db_sg.id
+  source_security_group_id = var.allowed_security_group_ids[count.index]
+}
+
+# If no allowed_security_group_ids provided, fall back to CIDR-based rule
+resource "aws_security_group_rule" "from_cidr" {
+  count              = length(var.allowed_security_group_ids) == 0 ? 1 : 0
+  type               = "ingress"
+  from_port          = var.port
+  to_port            = var.port
+  protocol           = "tcp"
+  security_group_id  = aws_security_group.db_sg.id
+  cidr_blocks        = length(var.vpc_cidr_block) > 0 ? [var.vpc_cidr_block] : ["10.0.0.0/8"]
 }
 
 # Parameter group for single RDS instance (non-Aurora)
@@ -52,6 +67,14 @@ resource "aws_db_parameter_group" "instance_pg" {
     value = (lower(var.engine) == "postgres" || lower(var.engine) == "postgresql") ? "4MB" : "16M"
   }
 
+  dynamic "parameter" {
+    for_each = var.parameters_map
+    content {
+      name  = parameter.key
+      value = parameter.value
+    }
+  }
+
   tags = var.tags
 }
 
@@ -73,6 +96,14 @@ resource "aws_rds_cluster_parameter_group" "cluster_pg" {
   parameter {
     name  = "work_mem"
     value = "4MB"
+  }
+
+  dynamic "parameter" {
+    for_each = var.parameters_map
+    content {
+      name  = parameter.key
+      value = parameter.value
+    }
   }
 
   tags = var.tags

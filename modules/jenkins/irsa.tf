@@ -52,9 +52,19 @@ resource "aws_iam_role" "jenkins_agent" {
 
 # Policy for pushing to ECR and reading SSM/secrets if needed
 data "aws_iam_policy_document" "ecr_policy" {
+  # Allow getting an auth token (must be global)
   statement {
     actions = [
       "ecr:GetAuthorizationToken",
+    ]
+    resources = ["*"]
+  }
+
+  # Allow repository-scoped image push/pull actions. If a specific ARN
+  # is supplied via `var.ecr_repository_arn` scope to that ARN, otherwise
+  # fall back to '*'.
+  statement {
+    actions = [
       "ecr:BatchCheckLayerAvailability",
       "ecr:GetDownloadUrlForLayer",
       "ecr:BatchGetImage",
@@ -63,7 +73,7 @@ data "aws_iam_policy_document" "ecr_policy" {
       "ecr:UploadLayerPart",
       "ecr:CompleteLayerUpload"
     ]
-    resources = ["*"]
+    resources = var.ecr_repository_arn != "" ? [var.ecr_repository_arn] : ["*"]
   }
 }
 

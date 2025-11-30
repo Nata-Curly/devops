@@ -82,6 +82,44 @@ All module variables live in `variables.tf`. Key variables (name — type — de
 - `tags` — map(string) — `{}` — tags to apply
 - `port` — number — `5432` — DB port
 
+New / additional variables
+
+- `allowed_security_group_ids` — list(string) — `[]` — optional list of Security Group IDs which are allowed to access the DB (preferred over CIDR).
+- `replica_count` — number — `0` — number of Aurora reader instances to create when `use_aurora = true`.
+- `parameters_map` — map(string) — `{}` — optional map of parameter_name -> value to include in the created parameter group.
+
+Example: create an Aurora cluster with 2 readers
+
+```hcl
+module "rds_aurora" {
+  source         = "../modules/rds"
+  use_aurora     = true
+  subnet_ids     = ["subnet-01234567","subnet-89abcdef"]
+  vpc_id         = "vpc-0123456789abcdef0"
+  db_name        = "myappdb"
+  username       = "clusteradmin"
+  password       = var.db_password
+  engine         = "aurora-postgresql"
+  instance_class = "db.r5.large"
+  replica_count  = 2
+  tags = { Environment = "prod" }
+}
+```
+
+Notes about `allowed_security_group_ids` and secure access:
+
+- Prefer passing `allowed_security_group_ids` with the IDs of your application security groups so only your app can connect to the DB. If you don't have an SG to pass, the module falls back to `vpc_cidr_block` (or a safe default). Example usage:
+
+```hcl
+module "rds" {
+  source = "../modules/rds"
+  # ... other args ...
+  allowed_security_group_ids = [module.app.security_group_id]
+}
+```
+
+If your other modules don't currently expose a security group id output, either add an output there or pass the SG id explicitly via variables.
+
 See `variables.tf` for full descriptions and defaults.
 
 ## Outputs

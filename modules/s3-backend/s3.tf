@@ -3,7 +3,7 @@ resource "aws_s3_bucket" "tf_state" {
 
   tags = {
     Name = var.bucket_name
-    Env  = "lesson-db-module"
+    Env  = "final-project"
   }
 }
 

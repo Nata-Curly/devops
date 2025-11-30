@@ -1,0 +1,17 @@
+// Simple Jenkinsfile placeholder for the Django app
+pipeline {
+  agent any
+
+  stages {
+    stage('Build') {
+      steps {
+        echo 'Build step - implement your pipeline here (docker build, tests, push)'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        echo 'Deploy step - e.g., update Helm values or trigger Argo CD'
+      }
+    }
+  }
+}

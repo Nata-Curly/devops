@@ -27,3 +27,13 @@ output "rds_cluster_endpoint" {
   value       = try(module.rds.cluster_endpoint, null)
   description = "Aurora cluster endpoint (null if single-instance)"
 }
+
+output "grafana_service" {
+  value       = "kube-prometheus-stack-grafana"
+  description = "Name of the Grafana service (use with kubectl -n monitoring port-forward)"
+}
+
+output "grafana_namespace" {
+  value       = module.monitoring.namespace
+  description = "Namespace where Grafana is installed"
+}

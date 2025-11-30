@@ -1,0 +1,2 @@
+This is a placeholder for your Django project source code.
+Create your Django project here (manage.py, project package, settings, wsgi.py).
